@@ -19,7 +19,7 @@ async function registerUser(user) {
 async function getUserByUsername(username) {
     return prisma.users.findFirst({
         where: {
-            username
+            email: username
         }
     })
 }
