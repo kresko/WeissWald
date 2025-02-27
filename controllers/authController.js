@@ -1,34 +1,32 @@
 const db = require('../db/authQueryHandler');
-const passport = require('passport');
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
+const dotenv = require("dotenv");
+
+dotenv.config();
 
 async function registerUser(req, res) {
     try {
-        await db.registerUser(req.body);
+        const newUser = await db.registerUser(req.body);
 
-        return res.json('User created!');
+        return res.json({message: 'User created!', user: newUser});
     } catch (e) {
         console.log(e);
     }
 }
 
 async function loginUser(req, res) {
-    passport.authenticate("local", (err, user, info) => {
-        if (err) {
-            return next(err);
-        }
+    const { email, password } = req.body;
 
-        if (!user) {
-            return res.redirect('/');
-        }
+    const user = await db.getUserByUsername(req.body.email);
+    if (!user) return res.status(400).json({ message: "Invalid email or password" });
 
-        req.login(user, (err) => {
-            if (err) {
-                return next(err);
-            }
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(400).json({ message: "Invalid email or password" });
 
-            return res.redirect('/');
-        });
-    })(req, res, next);
+    const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: "1h" });
+
+    res.json({ token, user });
 }
 
 module.exports = {
